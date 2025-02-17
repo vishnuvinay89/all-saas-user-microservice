@@ -677,15 +677,24 @@ export class PostgresUserService implements IServicelocator {
 
         const privilegeData = await this.postgresRoleService.findPrivilegeByRoleId(roleArray);
         const privileges = privilegeData.map(priv => priv.name);
-
-        combinedResult.push({
+        let cohortIds = [];
+        if(roleName === 'learner') {
+          const mappedCohorts = await this.cohortMemberRepository.find({
+            where: { userId },
+            select: ['cohortId']
+          })
+          cohortIds = mappedCohorts.map(id => id.cohortId)
+        }
+        const result = {
           tenantName: data.tenantname,
           tenantId: data.tenantId,
           userTenantMappingId: data.usertenantmappingid,
           roleId: roleId,
           roleName: roleName,
-          privileges: privileges
-        });
+          privileges: privileges,
+          ...(roleName === 'learner' && { mappedCohorts: cohortIds })
+        }
+        combinedResult.push(result);
       }
     }
 
