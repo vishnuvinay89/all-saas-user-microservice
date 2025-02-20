@@ -307,6 +307,7 @@ export class PostgresCohortService {
       cohortCreateDto.createdBy = decoded?.sub;
       cohortCreateDto.updatedBy = decoded?.sub;
       cohortCreateDto.status = cohortCreateDto.status || 'active';
+      cohortCreateDto.type = cohortCreateDto.type.toLowerCase();
       // cohortCreateDto.attendanceCaptureImage = false;
 
       const existData = await this.cohortRepository.find({
