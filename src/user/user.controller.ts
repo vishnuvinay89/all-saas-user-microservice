@@ -41,7 +41,9 @@ import { JwtAuthGuard } from "src/common/guards/keycloak.guard";
 import { Request, Response } from "express";
 import { AllExceptionsFilter } from "src/common/filters/exception.filter";
 import { APIID } from "src/common/utils/api-id.config";
-import { ForgotPasswordDto, ResetUserPasswordDto, SendPasswordResetLinkDto } from "./dto/passwordReset.dto";
+import { ForgotPasswordDto, ResetUserPasswordDto, SendPasswordResetLinkDto,learnerForgotPasswordDto } from "./dto/passwordReset.dto";
+import { PostgresUserService } from "src/adapters/postgres/user-adapter";
+
 export interface UserData {
   context: string;
   // tenantId: string;
@@ -54,6 +56,7 @@ export interface UserData {
 export class UserController {
   constructor(
     private userAdapter: UserAdapter,
+    private postgresUserService: PostgresUserService,
   ) { }
 
   @UseFilters(new AllExceptionsFilter(APIID.USER_GET))
@@ -178,6 +181,17 @@ export class UserController {
     @Body() reqBody: ForgotPasswordDto
   ) {
     return await this.userAdapter.buildUserAdapter().forgotPassword(request, reqBody, response)
+  }
+
+  @Post("/learner-forgot-password")
+  @ApiOkResponse({ description: 'Forgot password reset successfully.' })
+  @UsePipes(new ValidationPipe({ transform: true }))
+  public async learnerforgotPassword(
+    @Req() request: Request,
+    @Res() response: Response,
+    @Body() reqBody: learnerForgotPasswordDto
+  ) {
+    return await this.postgresUserService.learnerforgotPassword(request, reqBody, response)
   }
 
   @UseFilters(new AllExceptionsFilter(APIID.USER_RESET_PASSWORD))

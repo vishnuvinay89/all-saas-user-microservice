@@ -188,6 +188,92 @@ export class PostgresUserService implements IServicelocator {
     }
   }
 
+  async learnerforgotPassword(request: any, body: any, response: Response<any, Record<string, any>>) {
+    const apiId = APIID.USER_FORGOT_PASSWORD;
+    const tenantId = request.headers.tenantid;
+    const decoded: any = jwt_decode(request.headers.authorization);
+  
+    try {
+      // Check if User Exists
+      const userDetail = await this.usersRepository.findOne({
+        where: { username: body.userName }
+      });
+      if (!userDetail) {
+        return APIResponse.error(
+          response,
+          apiId,
+          API_RESPONSES.USERNAME_NOT_FOUND,
+          'User not found.',
+          HttpStatus.NOT_FOUND
+        );
+      }
+  
+      // Validate Learner-Tenant & Admin-Tenant Mapping in a single function
+      await this.validateUserandTenantMapping(userDetail.userId, tenantId);
+      await this.validateUserandTenantMapping(decoded.sub, tenantId);
+  
+      // Get Keycloak Admin Token
+      const keycloakResponse = await getKeycloakAdminToken();
+      const keyClocktoken = keycloakResponse.data.access_token;
+  
+      // Check Role and Access
+      const role = await this.getUserRoles(decoded.sub, tenantId);
+      if (role.code === 'cohort_admin') {
+        const cohortIds = await this.getCohortIdsForTenant(decoded.sub, tenantId);
+        const learnercohorts = await this.cohortMemberRepository.find({
+          where: { userId: userDetail.userId, cohortId: In(cohortIds) }
+        });
+        if (learnercohorts.length === 0) {
+          return APIResponse.error(
+            response,
+            apiId,
+            'You don\'t have access to update the password of this learner',
+            'Unauthorized access attempt.',
+            HttpStatus.UNAUTHORIZED
+          );
+        }
+      }
+  
+      // Validate new password
+      if (!body.newPassword || body.newPassword.length < 8) {
+        return APIResponse.error(
+          response,
+          apiId,
+          'New password does not meet security requirements.',
+          'Password too short.',
+          HttpStatus.BAD_REQUEST
+        );
+      }
+  
+      // Reset Keycloak Password
+      await this.resetKeycloakPassword(
+        request,
+        userDetail,
+        keyClocktoken,
+        body.newPassword,
+        userDetail.userId
+      );
+  
+      return APIResponse.success(
+        response,
+        apiId,
+        {},
+        HttpStatus.OK,
+        API_RESPONSES.FORGOT_PASSWORD_SUCCESS
+      );
+  
+    } catch (error) {
+      console.error('Error in learnerforgotPassword:', error);
+      return APIResponse.error(
+        response,
+        apiId,
+        API_RESPONSES.INTERNAL_SERVER_ERROR,
+        `Error: ${error.message || error}`,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+  
   // Utility function to check user-tenant mapping
   async validateUserandTenantMapping(userId: string, tenantId: string) {
     let userTenantMapping = await this.userTenantMappingRepository.find({
