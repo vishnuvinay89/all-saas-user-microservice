@@ -25,3 +25,14 @@ export class ForgotPasswordDto {
     @IsNotEmpty()
     token: string;
 }
+
+export class learnerForgotPasswordDto {
+
+    @IsString()
+    @IsNotEmpty()
+    newPassword: string;
+
+    @IsString()
+    @IsNotEmpty()
+    userName: string;
+}
