@@ -16,6 +16,8 @@ import {
   Delete,
   ParseUUIDPipe,
   UseFilters,
+  UploadedFile,
+  UseInterceptors
 } from "@nestjs/common";
 
 import {
@@ -31,6 +33,7 @@ import {
   ApiInternalServerErrorResponse,
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiConsumes,
 } from "@nestjs/swagger";
 
 import { UserSearchDto } from "./dto/user-search.dto";
@@ -43,6 +46,7 @@ import { AllExceptionsFilter } from "src/common/filters/exception.filter";
 import { APIID } from "src/common/utils/api-id.config";
 import { ForgotPasswordDto, ResetUserPasswordDto, SendPasswordResetLinkDto,learnerForgotPasswordDto } from "./dto/passwordReset.dto";
 import { PostgresUserService } from "src/adapters/postgres/user-adapter";
+import { FileInterceptor } from '@nestjs/platform-express';
 
 export interface UserData {
   context: string;
@@ -113,6 +117,26 @@ export class UserController {
   ) {
     return await this.userAdapter.buildUserAdapter().createUser(request, userCreateDto, response);
 
+  }
+
+  // bulk create of users
+  @UseInterceptors(FileInterceptor('csvFile'))
+  @UseFilters(new AllExceptionsFilter(APIID.USER_CREATE_BULK))
+  @Post("/bulk-create")
+  @UseGuards(JwtAuthGuard)
+  @ApiBasicAuth("access-token")
+  @ApiConsumes('multipart/form-data')
+  @ApiCreatedResponse({ description: "Users have been created successfully." })
+  @ApiForbiddenResponse({ description: "Forbidden" })
+  @ApiHeader({
+    name: "tenantid",
+  })
+  public async bulkCreateUsers(
+    @Req() request: Request,
+    @UploadedFile() csvFile: Express.Multer.File,
+    @Res() response: Response
+  ) {
+    return await this.postgresUserService.bulkUploadUsers(request, csvFile, response)
   }
 
   @UseFilters(new AllExceptionsFilter(APIID.USER_UPDATE))

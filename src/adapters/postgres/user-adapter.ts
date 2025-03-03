@@ -35,6 +35,7 @@ import { JwtUtil } from '@utils/jwt-token';
 import { ConfigService } from '@nestjs/config';
 import { formatTime } from '@utils/formatTimeConversion';
 import { API_RESPONSES } from '@utils/response.messages';
+import { parse } from 'csv-parse/sync';
 
 
 @Injectable()
@@ -950,6 +951,172 @@ export class PostgresUserService implements IServicelocator {
     } catch (e) {
       const errorMessage = e.message || 'Internal server error';
       return APIResponse.error(response, apiId, "Internal Server Error", errorMessage, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+  async bulkCreateUser(request: any, userCreateDto: UserCreateDto, response: Response) {
+      // check and validate all fields
+      let validatedRoles = await this.validateRequestBody(userCreateDto)
+
+      if (
+        validatedRoles &&
+        Array.isArray(validatedRoles) &&
+        validatedRoles.length > 0
+      ) {
+        const errorMessage = validatedRoles.join("; ");
+        throw new Error(errorMessage);
+      } else if (validatedRoles) {
+        throw new Error("Validation Error");
+      }
+
+      userCreateDto.username = userCreateDto.username.toLocaleLowerCase();
+      const userSchema = new UserCreateDto(userCreateDto);
+
+      let errKeycloak = "";
+      let resKeycloak = "";
+
+      const keycloakResponse = await getKeycloakAdminToken();
+      const token = keycloakResponse.data.access_token;
+      let checkUserinKeyCloakandDb = await this.checkUserinKeyCloakandDb(userCreateDto)
+      // let checkUserinDb = await this.checkUserinKeyCloakandDb(userCreateDto.username);
+      if (checkUserinKeyCloakandDb) {
+        throw new Error('User Already Exist') 
+      }
+      resKeycloak = await createUserInKeyCloak(userSchema, token).catch(
+        (error) => {
+          errKeycloak = error.response?.data.errorMessage;
+          throw new Error(errKeycloak);
+        }
+      );
+
+      userCreateDto.userId = resKeycloak;
+
+      let result = await this.createUserInDatabase(request, userCreateDto, response);
+
+      const createFailures = [];
+      if (result && userCreateDto.customFields && userCreateDto.customFields.length > 0) {
+
+        let userId = result?.userId;
+        let roles;
+
+        if (validatedRoles) {
+          roles = validatedRoles?.map(({ code }) => code?.toUpperCase())
+        }
+
+        const customFields = await this.fieldsService.findCustomFields("USERS", roles)
+
+        if (customFields) {
+          const customFieldAttributes = customFields.reduce((fieldDetail, { fieldId, fieldAttributes, fieldParams, name }) => fieldDetail[`${fieldId}`] ? fieldDetail : { ...fieldDetail, [`${fieldId}`]: { fieldAttributes, fieldParams, name } }, {});
+
+
+          for (let fieldValues of userCreateDto.customFields) {
+            const fieldData = {
+              fieldId: fieldValues['fieldId'],
+              value: fieldValues['value']
+            }
+
+            let res = await this.fieldsService.updateCustomFields(userId, fieldData, customFieldAttributes[fieldData.fieldId]);
+
+            if (res.correctValue) {
+              if (!result['customFields'])
+                result['customFields'] = [];
+              result["customFields"].push(res);
+            } else {
+              createFailures.push(`${fieldData.fieldId}: ${res?.valueIssue} - ${res.fieldName}`)
+            }
+          }
+        }
+      }
+  }
+
+  async bulkUploadUsers(request: any,csvFile :any, response: Response) {
+    const apiId = APIID.USER_CREATE_BULK;
+    const decoded: any = jwt_decode(request.headers.authorization);
+
+    try {
+      if (csvFile == undefined) {
+        return APIResponse.error(
+          response, 
+          apiId, 
+          "BAD_REQUEST", 
+          "CSV file is required", 
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      const csvData = csvFile.buffer.toString('utf8');
+      
+      // Parse CSV data
+      const records = parse(csvData, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true
+      });
+  
+      const results = {
+        success: 0,
+        failed: 0,
+        failedDetails: []
+      };
+  
+      // Process each user record
+      for (const record of records) {
+        // Validate required fields
+        if (!record.username || !record.name || !record.password) {
+          results.failed++;
+          results.failedDetails.push({
+            record: record.username || 'Unknown',
+            error: 'Missing required fields (username, name, or password)'
+          });
+          continue;
+        }
+
+        // Create UserCreateDto from CSV record
+        let userCreateDto = 
+        {
+          username :record.username.toLocaleLowerCase(),
+          name : record.name,
+          password : record.password,
+          createdBy : decoded.sub,
+          updatedBy : decoded.sub,
+          tenantCohortRoleMapping : [
+            {
+              roleId: request.body.roleId,
+              tenantId: request.body.tenantId,
+              cohortId: [request.body.cohortId]
+            }
+          ]
+        }
+        const userSchema = new UserCreateDto(userCreateDto);
+        try {
+          await this.bulkCreateUser(request, userSchema, response);
+          results.success++;
+        }
+        catch (error) {
+          results.failed++;
+          results.failedDetails.push({
+            record: record.username || 'Unknown',
+            error : error.message
+          });
+        }
+      }
+  
+      // Return overall results
+      return APIResponse.success(
+        response,
+        apiId,
+        results,
+        HttpStatus.OK,
+        `Bulk upload completed. Success: ${results.success}, Failed: ${results.failed}`
+      );
+  
+    } catch (e) {
+      const errorMessage = e.message || 'Internal server error';
+      return APIResponse.error(
+        response,
+        apiId,
+        "Internal Server Error",
+        errorMessage,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
