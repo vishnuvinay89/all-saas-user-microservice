@@ -954,78 +954,43 @@ export class PostgresUserService implements IServicelocator {
     }
   }
   async bulkCreateUser(request: any, userCreateDto: UserCreateDto, response: Response) {
-      // check and validate all fields
-      let validatedRoles = await this.validateRequestBody(userCreateDto)
+    // check and validate all fields
+    let validatedRoles = await this.validateRequestBody(userCreateDto)
 
-      if (
-        validatedRoles &&
-        Array.isArray(validatedRoles) &&
-        validatedRoles.length > 0
-      ) {
-        const errorMessage = validatedRoles.join("; ");
-        throw new Error(errorMessage);
-      } else if (validatedRoles) {
-        throw new Error("Validation Error");
+    if (
+      validatedRoles &&
+      Array.isArray(validatedRoles) &&
+      validatedRoles.length > 0
+    ) {
+      const errorMessage = validatedRoles.join("; ");
+      throw new Error(errorMessage);
+    } else if (validatedRoles) {
+      throw new Error("Validation Error");
+    }
+
+    userCreateDto.username = userCreateDto.username.toLocaleLowerCase();
+    const userSchema = new UserCreateDto(userCreateDto);
+
+    let errKeycloak = "";
+    let resKeycloak = "";
+
+    const keycloakResponse = await getKeycloakAdminToken();
+    const token = keycloakResponse.data.access_token;
+    let checkUserinKeyCloakandDb = await this.checkUserinKeyCloakandDb(userCreateDto)
+    // let checkUserinDb = await this.checkUserinKeyCloakandDb(userCreateDto.username);
+    if (checkUserinKeyCloakandDb) {
+      throw new Error('User Already Exist') 
+    }
+    resKeycloak = await createUserInKeyCloak(userSchema, token).catch(
+      (error) => {
+        errKeycloak = error.response?.data.errorMessage;
+        throw new Error(errKeycloak);
       }
+    );
 
-      userCreateDto.username = userCreateDto.username.toLocaleLowerCase();
-      const userSchema = new UserCreateDto(userCreateDto);
+    userCreateDto.userId = resKeycloak;
 
-      let errKeycloak = "";
-      let resKeycloak = "";
-
-      const keycloakResponse = await getKeycloakAdminToken();
-      const token = keycloakResponse.data.access_token;
-      let checkUserinKeyCloakandDb = await this.checkUserinKeyCloakandDb(userCreateDto)
-      // let checkUserinDb = await this.checkUserinKeyCloakandDb(userCreateDto.username);
-      if (checkUserinKeyCloakandDb) {
-        throw new Error('User Already Exist') 
-      }
-      resKeycloak = await createUserInKeyCloak(userSchema, token).catch(
-        (error) => {
-          errKeycloak = error.response?.data.errorMessage;
-          throw new Error(errKeycloak);
-        }
-      );
-
-      userCreateDto.userId = resKeycloak;
-
-      let result = await this.createUserInDatabase(request, userCreateDto, response);
-
-      const createFailures = [];
-      if (result && userCreateDto.customFields && userCreateDto.customFields.length > 0) {
-
-        let userId = result?.userId;
-        let roles;
-
-        if (validatedRoles) {
-          roles = validatedRoles?.map(({ code }) => code?.toUpperCase())
-        }
-
-        const customFields = await this.fieldsService.findCustomFields("USERS", roles)
-
-        if (customFields) {
-          const customFieldAttributes = customFields.reduce((fieldDetail, { fieldId, fieldAttributes, fieldParams, name }) => fieldDetail[`${fieldId}`] ? fieldDetail : { ...fieldDetail, [`${fieldId}`]: { fieldAttributes, fieldParams, name } }, {});
-
-
-          for (let fieldValues of userCreateDto.customFields) {
-            const fieldData = {
-              fieldId: fieldValues['fieldId'],
-              value: fieldValues['value']
-            }
-
-            let res = await this.fieldsService.updateCustomFields(userId, fieldData, customFieldAttributes[fieldData.fieldId]);
-
-            if (res.correctValue) {
-              if (!result['customFields'])
-                result['customFields'] = [];
-              result["customFields"].push(res);
-            } else {
-              createFailures.push(`${fieldData.fieldId}: ${res?.valueIssue} - ${res.fieldName}`)
-            }
-          }
-        }
-      }
+    let result = await this.createUserInDatabase(request, userCreateDto, response);
   }
 
   async bulkUploadUsers(request: any,csvFile :any, response: Response) {
