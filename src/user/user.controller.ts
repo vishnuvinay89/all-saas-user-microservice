@@ -120,7 +120,7 @@ export class UserController {
   }
 
   // bulk create of users
-  @UseInterceptors(FileInterceptor('csvFile'))
+  @UseInterceptors(FileInterceptor('file'))
   @UseFilters(new AllExceptionsFilter(APIID.USER_CREATE_BULK))
   @Post("/bulk-create")
   @UseGuards(JwtAuthGuard)
