@@ -24,7 +24,7 @@ export class CronService {
   async getOldActiveCohorts() {
     try {
       const dateThreshold = new Date();
-      dateThreshold.setDate(dateThreshold.getDate() - 30);
+      dateThreshold.setDate(dateThreshold.getDate() - parseInt(process.env.COHORT_EXPIRY_DAYS));
       console.log(dateThreshold)
 
       const cohorts = await this.cohortRepository.find({
