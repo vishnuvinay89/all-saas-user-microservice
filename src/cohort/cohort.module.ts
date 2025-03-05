@@ -23,6 +23,7 @@ import { User } from "src/user/entities/user-entity";
 import { UserRoleMapping } from "src/rbac/assign-role/entities/assign-role.entity";
 import { PostgresRoleService } from "src/adapters/postgres/rbac/role-adapter";
 import { RolePrivilegeMapping } from "src/rbac/assign-privilege/entities/assign-privilege.entity";
+import { CronService } from './cron/cron.service';
 
 @Module({
   imports: [
@@ -32,6 +33,6 @@ import { RolePrivilegeMapping } from "src/rbac/assign-privilege/entities/assign-
     PostgresModule
   ],
   controllers: [CohortController],
-  providers: [CohortAdapter, FieldsService, PostgresCohortService, PostgresFieldsService, CohortAcademicYearService, PostgresAcademicYearService, PostgresCohortMembersService,PostgresRoleService],
+  providers: [CohortAdapter, FieldsService, PostgresCohortService, PostgresFieldsService, CohortAcademicYearService, PostgresAcademicYearService, PostgresCohortMembersService,PostgresRoleService,CronService],
 })
 export class CohortModule { }
