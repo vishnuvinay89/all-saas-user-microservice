@@ -1042,6 +1042,7 @@ export class PostgresUserService implements IServicelocator {
           password : record.password,
           createdBy : decoded.sub,
           updatedBy : decoded.sub,
+          grade: record.grade && !isNaN(Number(record.grade)) ? parseInt(record.grade, 10) : 0,
           tenantCohortRoleMapping : [
             {
               roleId: request.body.roleId,
