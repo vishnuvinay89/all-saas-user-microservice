@@ -31,6 +31,9 @@ export class User {
   @Column({ nullable: true })
   email: string;
 
+  @Column({ type: 'int', default: 0 })
+  grade: number;
+
   @Column({ nullable: true })
   district: string;
 
