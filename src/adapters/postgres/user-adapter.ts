@@ -1221,7 +1221,8 @@ export class PostgresUserService implements IServicelocator {
       user.updatedBy = userCreateDto?.updatedBy || userCreateDto?.userId,
       user.userId = userCreateDto?.userId,
       user.state = userCreateDto?.state,
-      user.district = userCreateDto?.district
+      user.district = userCreateDto?.district,
+      user.grade = userCreateDto?.grade
     // user.address = userCreateDto?.address,
     // user.pincode = userCreateDto?.pincode
 

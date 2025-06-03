@@ -1,7 +1,7 @@
-import { IsString, IsOptional, IsArray, ValidateNested, IsNotEmpty, IsEnum, ValidateIf } from 'class-validator';
+import { IsString, IsOptional, IsArray, ValidateNested, IsNotEmpty, IsEnum, ValidateIf, IsInt, Min } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
 import { UserStatus } from '../entities/user-entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class UserDataDTO {
 
@@ -15,6 +15,12 @@ class UserDataDTO {
     @IsOptional()
     name: string;
 
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsInt({ message: 'Grade must be an integer' })
+    @Min(1, { message: 'Grade must be greater than 0 if provided' })
+    grade?: number;
+    
     @ApiProperty({ type: () => String })
     @IsString()
     @IsOptional()
