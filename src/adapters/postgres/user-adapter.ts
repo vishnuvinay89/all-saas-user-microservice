@@ -575,7 +575,7 @@ export class PostgresUserService implements IServicelocator {
     }
 
     //Get user core fields data
-    const query = `SELECT U."userId", U."username", U."email", U."name", R."name" AS role, 
+    const query = `SELECT U."userId", U."username", U."email", U."name", U."grade", R."name" AS role, 
     U."mobile", U."createdBy", U."updatedBy", U."createdAt", U."updatedAt", 
     U.status,UTM."tenantId"
     FROM public."Users" U
