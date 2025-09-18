@@ -91,6 +91,15 @@ export class CohortDto {
   // @Expose()
   // metadata: string;
 
+  //expiryDate
+  @ApiPropertyOptional({
+    type: Date,
+    description: "The expiry date of the cohort",
+    default: "",
+  })
+  @Expose()
+  expiryDate: Date;
+
   //createdBy
   @Expose()
   @ApiProperty({

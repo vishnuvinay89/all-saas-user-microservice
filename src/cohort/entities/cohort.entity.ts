@@ -40,6 +40,12 @@ export class Cohort {
   })
   updatedAt: Date;
 
+  @Column({
+    type: "timestamp with time zone",
+    nullable: true
+  })
+  expiryDate: Date;
+
   @Column()
   createdBy: string;
 

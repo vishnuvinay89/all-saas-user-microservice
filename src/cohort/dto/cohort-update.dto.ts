@@ -4,7 +4,8 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  ValidateNested
+  ValidateNested,
+  IsDateString
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { FieldValuesOptionDto } from "src/user/dto/user-create.dto";
@@ -96,6 +97,16 @@ export class CohortUpdateDto {
   //updatedBy
   @Expose()
   updatedBy: string;
+
+  @ApiPropertyOptional({
+    type: Date,
+    description: "The expiry date of the cohort",
+    required: false
+  })
+  @Expose()
+  @IsOptional()
+  @IsDateString()
+  expiryDate: Date;
 
   //fieldValues
   @ApiPropertyOptional({

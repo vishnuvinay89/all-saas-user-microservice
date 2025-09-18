@@ -307,6 +307,10 @@ export class PostgresCohortService {
       cohortCreateDto.createdBy = decoded?.sub;
       cohortCreateDto.updatedBy = decoded?.sub;
       cohortCreateDto.status = cohortCreateDto.status || 'active';
+      // Set default expiry date to 30 days from now for all cohorts
+      const defaultExpiryDate = new Date();
+      defaultExpiryDate.setDate(defaultExpiryDate.getDate() + parseInt(process.env.COHORT_EXPIRY_DAYS || '30'));
+      (cohortCreateDto as any).expiryDate = defaultExpiryDate;
       cohortCreateDto.type = cohortCreateDto.type.toLowerCase();
       // cohortCreateDto.attendanceCaptureImage = false;
 
@@ -424,6 +428,23 @@ export class PostgresCohortService {
       if (existingCohorDetails) {
         let updateData = {};
         let customFields = {};
+
+        // If updating expiry date
+        if (cohortUpdateDto.expiryDate) {
+          const newExpiryDate = new Date(cohortUpdateDto.expiryDate);
+          const currentDate = new Date();
+          
+          if (newExpiryDate <= currentDate) {
+            return APIResponse.error(
+              res,
+              apiId,
+              "Invalid expiry date",
+              "The expiry date must be in the future",
+              HttpStatus.BAD_REQUEST
+            );
+          }
+          cohortUpdateDto.expiryDate = newExpiryDate;
+        }
 
         //validation  of customFields correct or not
         if (cohortUpdateDto.customFields && cohortUpdateDto.customFields.length > 0) {
