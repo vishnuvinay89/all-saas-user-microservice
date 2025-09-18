@@ -23,20 +23,22 @@ export class CronService {
   // Get all active cohorts older than 30 days
   async getOldActiveCohorts() {
     try {
-      const dateThreshold = new Date();
-      dateThreshold.setDate(dateThreshold.getDate() - parseInt(process.env.COHORT_EXPIRY_DAYS));
-      console.log(dateThreshold)
+      const currentDate = new Date();
+      console.log('Checking for expired cohorts at:', currentDate);
 
+      // Find cohorts that are active and have an expiryDate that is in the past
       const cohorts = await this.cohortRepository.find({
         where: {
           status: 'active',
-          createdAt: LessThan(dateThreshold),  // Only get those older than 30 days
-        },
+          expiryDate: LessThan(currentDate)
+        }
       });
 
+      console.log(`Found ${cohorts.length} expired cohorts`);
       return cohorts;
     } catch (error) {
-      console.error('Error fetching cohorts:', error);
+      console.error('Error fetching expired cohorts:', error);
+      return [];
     }
   }
 
