@@ -24,13 +24,15 @@ import { UserRoleMapping } from "src/rbac/assign-role/entities/assign-role.entit
 import { PostgresRoleService } from "src/adapters/postgres/rbac/role-adapter";
 import { RolePrivilegeMapping } from "src/rbac/assign-privilege/entities/assign-privilege.entity";
 import { CronService } from './cron/cron.service';
+import { UserApprovalModule } from '../user-approval/user-approval.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Cohort, FieldValues, Fields, CohortMembers, UserTenantMapping, Role, CohortAcademicYear, AcademicYear, User, UserRoleMapping,RolePrivilegeMapping]),
     HttpModule,
     HasuraModule,
-    PostgresModule
+    PostgresModule,
+    UserApprovalModule
   ],
   controllers: [CohortController],
   providers: [CohortAdapter, FieldsService, PostgresCohortService, PostgresFieldsService, CohortAcademicYearService, PostgresAcademicYearService, PostgresCohortMembersService,PostgresRoleService,CronService],

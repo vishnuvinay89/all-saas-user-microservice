@@ -5,6 +5,8 @@ import { TenantCreateDto } from './dto/tenant-create.dto';
 import { TenantUpdateDto } from './dto/tenant-update.dto';
 import { Request,Response } from "express";
 import { JwtAuthGuard } from "src/common/guards/keycloak.guard";
+import { ApprovalGuard } from "src/common/guards/approval.guard";
+
 @Controller('tenant')
 @UseGuards(JwtAuthGuard)
 export class TenantController {
@@ -29,6 +31,7 @@ export class TenantController {
 
     //Create a new tenant
     @Post("/create")
+    @UseGuards(ApprovalGuard)
     @ApiBody({type :TenantCreateDto})
     @UsePipes(new ValidationPipe({ transform: true }))
     @ApiCreatedResponse({ description: "Tenant Created Successfully" })
@@ -49,6 +52,7 @@ export class TenantController {
 
     //Delete a tenant
     @Delete("/delete")
+    @UseGuards(ApprovalGuard)
     @ApiCreatedResponse({ description: "Tenant Data Fetch" })
     @ApiForbiddenResponse({ description: "Forbidden" })
     @SerializeOptions({
@@ -66,6 +70,7 @@ export class TenantController {
 
     //Update a tenant
     @Patch("/update")
+    @UseGuards(ApprovalGuard)
     @ApiBody({ type: TenantUpdateDto })
     @UsePipes(new ValidationPipe({ transform: true }))
     @ApiCreatedResponse({ description: "Tenant Data Fetch" })
