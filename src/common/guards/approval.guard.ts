@@ -28,7 +28,6 @@ export class ApprovalGuard implements CanActivate {
 
       // For non-super admins, check if they have approved access
       const hasApprovedAccess = await this.userApprovalService.checkUserApprovalStatus(userId);
-      console.log(hasApprovedAccess)
       
       if (!hasApprovedAccess) {
         throw new ForbiddenException(
