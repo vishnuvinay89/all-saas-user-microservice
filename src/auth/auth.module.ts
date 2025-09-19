@@ -13,6 +13,7 @@ import { CohortMembers } from "src/cohortMembers/entities/cohort-member.entity";
 import { KeycloakService } from "src/common/utils/keycloak.service";
 import { HasuraModule } from "src/adapters/hasura/hasura.module";
 import { PostgresModule } from "src/adapters/postgres/postgres-module";
+import { UserApprovalModule } from "../user-approval/user-approval.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PostgresModule } from "src/adapters/postgres/postgres-module";
     HttpModule,
     HasuraModule,
     PostgresModule,
+    UserApprovalModule,
   ],
   controllers: [AuthController],
   providers: [

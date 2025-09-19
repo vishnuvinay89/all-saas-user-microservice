@@ -11,10 +11,13 @@ import { Role } from 'src/rbac/role/entities/role.entity';
 import { UserRoleMapping } from 'src/rbac/assign-role/entities/assign-role.entity';
 import { RolePrivilegeMapping } from 'src/rbac/assign-privilege/entities/assign-privilege.entity';
 import { PostgresAssignPrivilegeService } from 'src/adapters/postgres/rbac/privilegerole.adapter';
+import { UserApprovalModule } from '../user-approval/user-approval.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([Tenants,Cohort,UserTenantMapping,Role,UserRoleMapping,RolePrivilegeMapping]),
-    PostgresModule
+    PostgresModule,
+    UserApprovalModule
   ],
   controllers: [TenantController],
   providers: [TenantService,PostgresRoleService,PostgresAssignPrivilegeService]

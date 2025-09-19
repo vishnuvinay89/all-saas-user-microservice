@@ -55,4 +55,10 @@ export const APIID = {
   SEND_INVITATION: 'api.invitation.send',
   INVITATION_GET: "api.invitation.get",
   INVITATION_UPDATE: "api.invitation.update",
+  // User Approval API IDs
+  APPROVAL_REQUEST_CREATE: "api.approval.request.create",
+  APPROVAL_REQUEST_LIST: "api.approval.request.list",
+  APPROVAL_REQUEST_GET: "api.approval.request.get",
+  APPROVAL_REQUEST_APPROVE: "api.approval.request.approve",
+  APPROVAL_STATUS_GET: "api.approval.status.get",
 }

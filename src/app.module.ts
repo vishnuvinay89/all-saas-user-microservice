@@ -25,6 +25,7 @@ import { HttpService } from "@utils/http-service";
 import { TenantModule } from "./tenant/tenant.module";
 import { AcademicyearsModule } from './academicyears/academicyears.module';
 import { InvitationModule } from './invitation/invitation.module';
+import { UserApprovalModule } from './user-approval/user-approval.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { InvitationModule } from './invitation/invitation.module';
     TenantModule,
     AcademicyearsModule,
     InvitationModule,
+    UserApprovalModule,
   ],
   controllers: [AppController],
   providers: [AppService,HttpService]
