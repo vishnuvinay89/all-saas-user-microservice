@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TenantController } from './tenant.controller';
 import { TenantService } from './tenant.service';
 import { Tenants } from 'src/tenant/entities/tenant.entity';
@@ -17,9 +17,10 @@ import { UserApprovalModule } from '../user-approval/user-approval.module';
   imports: [
     TypeOrmModule.forFeature([Tenants,Cohort,UserTenantMapping,Role,UserRoleMapping,RolePrivilegeMapping]),
     PostgresModule,
-    UserApprovalModule
+    forwardRef(() => UserApprovalModule)
   ],
   controllers: [TenantController],
-  providers: [TenantService,PostgresRoleService,PostgresAssignPrivilegeService]
+  providers: [TenantService,PostgresRoleService,PostgresAssignPrivilegeService],
+  exports: [TenantService]
 })
 export class TenantModule { }

@@ -23,6 +23,12 @@ export class UserApprovalRequest {
   @Column({ type: "uuid" })
   userId: string;
 
+  @Column({ type: "text" })
+  tenantName: string;
+
+  @Column({ type: 'text', nullable: true })
+  domain: string | null; 
+
   @Column({
     type: "enum",
     enum: ApprovalStatus,

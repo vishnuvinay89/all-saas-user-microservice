@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { UserApprovalRequest, ApprovalStatus } from './entities/user-approval-request.entity';
 import { ApproveRequestDto } from './dto/approve-request.dto';
 import { ApprovalRequestSearchDto } from './dto/approval-request-search.dto';
 import { User } from '../user/entities/user-entity';
+import { UserRoleMapping } from '../rbac/assign-role/entities/assign-role.entity';
+import { Role } from '../rbac/role/entities/role.entity';
 import { PostgresRoleService } from '../adapters/postgres/rbac/role-adapter';
+import { MailService } from '../common/mail.service'
+import {TenantService} from '../tenant/tenant.service'
 import jwt_decode from 'jwt-decode';
 
 @Injectable()
@@ -15,47 +19,84 @@ export class UserApprovalService {
     private approvalRequestRepository: Repository<UserApprovalRequest>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(UserRoleMapping)
+    private userRoleMappingRepository: Repository<any>,
+    @InjectRepository(Role)
+    private roleRepository: Repository<any>,
     private postgresRoleService: PostgresRoleService,
+    @Inject(forwardRef(() => TenantService))
+    private tenantService: TenantService,
+    private mailService: MailService,
   ) {}
 
-  // User method - for regular users to request approval
+
+    async getAllSuperAdmins() {
+      const superAdminRole = await this.roleRepository.findOne({
+        where: { code: 'super_admin' },
+      });
+      if (!superAdminRole) return [];
+      const userRoles = await this.userRoleMappingRepository.find({
+        where: { roleId: superAdminRole.roleId },
+      });
+      const userIds = userRoles.map((ur) => ur.userId);
+      const users = await this.userRepository.find({
+        where: { userId: In(userIds) },
+      });    
+      return users;
+    }
+
   async createApprovalRequest(request: any): Promise<UserApprovalRequest> {
     const decoded: any = jwt_decode(request.headers.authorization);
     const userId = decoded.sub;
+    const email = decoded.email;
+    const name = decoded.name
+    const tenantName = request.body.name;
+    const domain = request.body.domain || "";
 
-    // Check if user already has a pending request
+    
+    // check if there is any pending request for the same tenant name
     const existingRequest = await this.approvalRequestRepository.findOne({
       where: {
-        userId,
+        tenantName,
         status: ApprovalStatus.PENDING,
       },
     });
-
     if (existingRequest) {
       throw new BadRequestException(
-        'You already have a pending approval request',
-      );
-    }
-
-    // Check if user already has an approved request
-    const approvedRequest = await this.approvalRequestRepository.findOne({
-      where: {
-        userId,
-        status: ApprovalStatus.APPROVED,
-      },
-    });
-
-    if (approvedRequest) {
-      throw new BadRequestException(
-        'You already have approved access',
+        'There is already a pending request with the same tenant name',
       );
     }
 
     const approvalRequest = this.approvalRequestRepository.create({
       userId,
+      tenantName,
+      domain
     });
 
-    return await this.approvalRequestRepository.save(approvalRequest);
+    const savedRequest = await this.approvalRequestRepository.save(approvalRequest);
+
+    // Find all super admins
+    // const superAdmins = await this.getAllSuperAdmins();
+    let superAdmins = [{email: process.env.SUPER_ADMIN_EMAIL}];
+
+    // Construct approval URL (adjust base URL as needed)
+    const approvalUrl = process.env.APPROVAL_URL;
+
+    // Send email to each super admin in parallel
+    await Promise.all(superAdmins.map((admin: any) =>
+      this.mailService.sendMail({
+        to: admin.email,
+        subject: `New Tenant Creation Request - ${tenantName}`,
+        html: `
+              <p>A new tenant creation request has been submitted.</p>
+              <p>Tenant Name :  <b>${tenantName}</b>
+              <p>Submitted by :  <b>${name}</b>
+              <p>Submitted on :  <b>${new Date().toLocaleString()}</b>
+              <p>Please log in to the Admin Portal to approve or reject this request.<a href="${approvalUrl}"><b>Click Here</b></a></p>`,
+      })
+    ));
+
+    return approvalRequest;
   }
 
   // Unified method - for both users and super admins
@@ -133,8 +174,51 @@ export class UserApprovalService {
     }
 
     approvalRequest.status = approveDto.status;
+    let approved = await this.approvalRequestRepository.save(approvalRequest)
 
-    return await this.approvalRequestRepository.save(approvalRequest);
+    if (approved) {
+      const user = await this.userRepository.findOne({ where: { userId: approved.userId } });
+
+      const messages = {
+        [ApprovalStatus.APPROVED]: {
+          subject: `Tenant Request Approved – ${approved.tenantName}`,
+          html: `
+            <p>Dear User,</p>
+            <p>We are pleased to inform you that your tenant creation request for 
+            <strong>${approved.tenantName}</strong> has been approved and successfully created.</p>
+            <p>You can now begin configuring and managing your tenant.</p>
+            <p>Best regards,<br/>Admin</p>
+          `,
+          action: async () => {
+            request.userId = approved.userId;
+            await this.tenantService.createtenantandAssignRoles(request, {
+              name: approved.tenantName,
+              domain: approved.domain || "",
+            });
+          },
+        },
+        [ApprovalStatus.REJECTED]: {
+          subject: `Tenant Request Rejected – ${approved.tenantName}`,
+          html: `
+            <p>Dear User,</p>
+            <p>We regret to inform you that your tenant creation request for 
+            <strong>${approved.tenantName}</strong> has been rejected.</p>
+            <p>If you require further clarification, please contact the system administrator at 
+            <a href="mailto:${process.env.SUPER_ADMIN_EMAIL}">${process.env.SUPER_ADMIN_EMAIL}</a>.</p>
+            <p>Thank you for your understanding.</p>
+            <p>Best regards,<br/>Admin</p>
+          `,
+        },
+      };
+
+    
+      const msg = messages[approved.status];
+      if (msg) {
+        if (msg.action) await msg.action();
+          await this.mailService.sendMail({ to: user.email, subject: msg.subject, html: msg.html });
+      }
+    }
+    return approved;
   }
 
   // Utility method for checking approval status (used by guards)

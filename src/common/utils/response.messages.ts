@@ -70,5 +70,6 @@ export const API_RESPONSES = {
   INVITEE_ALREADY_MAPPED:
     "This user is already mapped as cohort_admin to respective cohort",
   UNAUTHORIZED_TO_REVOKE: "This user is unauthorized to revoke this invitation",
-  REVOKE_ONLY_PENDING: "Only pending invitations can be revoked"
+  REVOKE_ONLY_PENDING: "Only pending invitations can be revoked",
+  TENANT_APPROVAL_REQUEST_CREATED: "Tenant approval request created successfully",
 };
