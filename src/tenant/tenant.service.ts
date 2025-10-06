@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Inject, forwardRef } from '@nestjs/common';
 import { Tenants } from './entities/tenant.entity';
 import { Cohort } from '../cohort/entities/cohort.entity';
 import { In, Repository } from 'typeorm';
@@ -16,6 +16,7 @@ import { PostgresAssignPrivilegeService } from 'src/adapters/postgres/rbac/privi
 import { CreatePrivilegeRoleDto } from 'src/rbac/assign-privilege/dto/create-assign-privilege.dto';
 import { UserRoleMapping } from 'src/rbac/assign-role/entities/assign-role.entity';
 import { PostgresUserService } from 'src/adapters/postgres/user-adapter';
+import { UserApprovalService } from 'src/user-approval/user-approval.service';
 @Injectable()
 export class TenantService {
     constructor(
@@ -27,6 +28,8 @@ export class TenantService {
         private UserTenantMappingRepository: Repository<UserTenantMapping>,
         @InjectRepository(UserRoleMapping)
         private UserRoleMappingRepository : Repository<UserRoleMapping>,
+        @Inject(forwardRef(() => UserApprovalService))
+        private UserApprovalService:UserApprovalService,
         private roleService:PostgresRoleService,
         private rolePrivilegeService : PostgresAssignPrivilegeService,
         private userService: PostgresUserService
@@ -167,32 +170,15 @@ export class TenantService {
                     HttpStatus.CONFLICT
                 );
             }
-            let result = await this.tenantRepository.save(tenantCreateDto);
-            if(result) {
-              let rolesDataofTenant = await this.createRolesAndAssignPrivileges(
-                result.tenantId
-              );
-                const tenantAdminRole = rolesDataofTenant.roles.find(
-                  (role) => role.code === "tenant_admin"
-                );
-                let tenantRoleMappingData = {
-                  userId: userId,
-                  tenantRoleMapping: {
-                    tenantId: result.tenantId,
-                    roleId: tenantAdminRole.roleId, //get role id of tenant_admin from roles list
-                  },
-                };
-                await this.userService.assignUserToTenant(
-                  tenantRoleMappingData,
-                  request
-                );
-            }
+
+            let createApproval =  await this.UserApprovalService.createApprovalRequest(request);
+
             return APIResponse.success(
                 response,
                 apiId,
-                result,
+                createApproval,
                 HttpStatus.CREATED,
-                API_RESPONSES.TENANT_CREATE
+                API_RESPONSES.TENANT_APPROVAL_REQUEST_CREATED
             );
         } catch (error) {
             const errorMessage = error.message || API_RESPONSES.INTERNAL_SERVER_ERROR;
@@ -204,6 +190,31 @@ export class TenantService {
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    public async createtenantandAssignRoles(request, tenantCreateDto) {
+        // const decoded: any = jwt_decode(request.headers.authorization);
+        const userId = request.userId;
+        let result = await this.tenantRepository.save(tenantCreateDto);
+
+        let rolesDataofTenant = await this.createRolesAndAssignPrivileges(
+        result.tenantId
+        );
+        const tenantAdminRole = rolesDataofTenant.roles.find(
+            (role) => role.code === "tenant_admin"
+        );
+        let tenantRoleMappingData = {
+            userId: userId,
+            tenantRoleMapping: {
+            tenantId: result.tenantId,
+            roleId: tenantAdminRole.roleId, //get role id of tenant_admin from roles list
+            },
+        };
+        await this.userService.assignUserToTenant(
+            tenantRoleMappingData,
+            request
+        );
+
     }
 
     public async deleteTenants(request, tenantId, response) {

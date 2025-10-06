@@ -31,7 +31,7 @@ export class TenantController {
 
     //Create a new tenant
     @Post("/create")
-    @UseGuards(ApprovalGuard)
+    // @UseGuards(ApprovalGuard)
     @ApiBody({type :TenantCreateDto})
     @UsePipes(new ValidationPipe({ transform: true }))
     @ApiCreatedResponse({ description: "Tenant Created Successfully" })
@@ -52,7 +52,7 @@ export class TenantController {
 
     //Delete a tenant
     @Delete("/delete")
-    @UseGuards(ApprovalGuard)
+    // @UseGuards(ApprovalGuard)
     @ApiCreatedResponse({ description: "Tenant Data Fetch" })
     @ApiForbiddenResponse({ description: "Forbidden" })
     @SerializeOptions({
@@ -70,7 +70,7 @@ export class TenantController {
 
     //Update a tenant
     @Patch("/update")
-    @UseGuards(ApprovalGuard)
+    // @UseGuards(ApprovalGuard)
     @ApiBody({ type: TenantUpdateDto })
     @UsePipes(new ValidationPipe({ transform: true }))
     @ApiCreatedResponse({ description: "Tenant Data Fetch" })

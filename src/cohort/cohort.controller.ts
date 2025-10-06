@@ -99,7 +99,7 @@ export class CohortController {
   }
 
   @UseFilters(new AllExceptionsFilter(APIID.COHORT_CREATE))
-  @UseGuards(ApprovalGuard)
+  // @UseGuards(ApprovalGuard)
   @Post("/create")
   // @ApiConsumes("multipart/form-data")
   @ApiBasicAuth("access-token")
@@ -194,7 +194,7 @@ export class CohortController {
     );
   }
   @UseFilters(new AllExceptionsFilter(APIID.COHORT_UPDATE))
-  @UseGuards(ApprovalGuard)
+  // @UseGuards(ApprovalGuard)
   @Put("/update/:cohortId")
   @ApiBasicAuth("access-token")
   @UseInterceptors(
@@ -228,7 +228,7 @@ export class CohortController {
 
 
   @UseFilters(new AllExceptionsFilter(APIID.COHORT_DELETE))
-  @UseGuards(ApprovalGuard)
+  // @UseGuards(ApprovalGuard)
   @Delete("/delete/:cohortId")
   @ApiBasicAuth("access-token")
   @ApiOkResponse({ description: "Cohort has been deleted successfully." })
