@@ -75,6 +75,7 @@ export class UserApprovalService {
 
     const savedRequest = await this.approvalRequestRepository.save(approvalRequest);
 
+    try {
     // Find all super admins
     // const superAdmins = await this.getAllSuperAdmins();
     let superAdmins = [{email: process.env.SUPER_ADMIN_EMAIL}];
@@ -95,6 +96,10 @@ export class UserApprovalService {
               <p>Please log in to the Admin Portal to approve or reject this request.<a href="${approvalUrl}"><b>Click Here</b></a></p>`,
       })
     ));
+    } catch (error) {
+      await this.approvalRequestRepository.delete(savedRequest.approvalId);
+      throw new Error(`Mail sending failed: ${error.message}`);
+    }
 
     return approvalRequest;
   }
@@ -187,6 +192,7 @@ export class UserApprovalService {
             <p>We are pleased to inform you that your tenant creation request for 
             <strong>${approved.tenantName}</strong> has been approved and successfully created.</p>
             <p>You can now begin configuring and managing your tenant.</p>
+            <p>Please log in to the Admin Portal to view the tenant. <a href="${process.env.TENANT_REDIRECT_URL}"><b>Click Here</b></a></p>
             <p>Best regards,<br/>Admin</p>
           `,
           action: async () => {
